@@ -1,0 +1,353 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#212121">
+    <title>Qwen Chat</title>
+    <style>
+      :root {
+        color-scheme: light;
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        font-synthesis: none;
+        text-rendering: optimizeLegibility;
+        --sidebar: #f7f7f8;
+        --surface: #ffffff;
+        --text: #262626;
+        --muted: #777;
+        --border: #e8e8e8;
+        --accent: #171717;
+      }
+
+      * { box-sizing: border-box; }
+      body { margin: 0; color: var(--text); background: var(--surface); }
+      button, textarea { font: inherit; }
+      button { color: inherit; }
+      .app { display: flex; height: 100dvh; overflow: hidden; }
+      .sidebar {
+        width: 260px; flex: 0 0 260px; display: flex; flex-direction: column;
+        gap: 18px; padding: 16px 12px; background: var(--sidebar);
+        border-right: 1px solid var(--border);
+      }
+      .brand { display: flex; align-items: center; gap: 10px; padding: 4px 9px 9px; font-weight: 650; }
+      .brand-mark {
+        display: grid; width: 30px; height: 30px; place-items: center;
+        border-radius: 10px; background: #202020; color: white; font-size: 15px;
+      }
+      .new-chat {
+        display: flex; align-items: center; gap: 10px; width: 100%; padding: 11px 12px;
+        background: transparent; border: 1px solid #dedede; border-radius: 10px;
+        text-align: left; cursor: pointer; transition: background .15s;
+      }
+      .new-chat:hover, .history-item:hover { background: #ececee; }
+      .history-label { margin: 7px 9px 0; color: var(--muted); font-size: 12px; font-weight: 600; }
+      .history { display: flex; flex: 1; flex-direction: column; gap: 3px; overflow: auto; }
+      .history-item {
+        overflow: hidden; padding: 9px 10px; border: 0; border-radius: 8px;
+        background: transparent; text-align: left; text-overflow: ellipsis; white-space: nowrap;
+        cursor: pointer; font-size: 13px;
+      }
+      .history-item.active { background: #e9e9eb; }
+      .sidebar-footer { padding: 11px 9px 3px; border-top: 1px solid var(--border); color: var(--muted); font-size: 12px; }
+      .main { display: flex; min-width: 0; flex: 1; flex-direction: column; }
+      .topbar { display: flex; height: 58px; align-items: center; justify-content: space-between; padding: 0 23px; }
+      .model-label { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; }
+      .model-pill { color: #777; font-size: 12px; font-weight: 400; }
+      .status { display: flex; align-items: center; gap: 7px; color: #747474; font-size: 12px; }
+      .status-dot { width: 7px; height: 7px; border-radius: 50%; background: #36a269; }
+      .status.offline .status-dot { background: #d49c35; }
+      .content { display: flex; min-height: 0; flex: 1; flex-direction: column; }
+      .messages { width: min(100%, 790px); flex: 1; align-self: center; overflow-y: auto; padding: 28px 24px 18px; }
+      .welcome { display: flex; height: 100%; min-height: 260px; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+      .welcome-icon { display: grid; width: 48px; height: 48px; place-items: center; margin-bottom: 20px; border: 1px solid var(--border); border-radius: 16px; font-size: 22px; }
+      .welcome h1 { margin: 0 0 8px; font-size: clamp(25px, 4vw, 32px); letter-spacing: -1.2px; }
+      .welcome p { margin: 0; color: var(--muted); font-size: 14px; }
+      .suggestions { display: grid; width: min(100%, 560px); grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 30px; }
+      .suggestion { padding: 13px 14px; border: 1px solid var(--border); border-radius: 12px; background: white; text-align: left; cursor: pointer; font-size: 13px; line-height: 1.4; }
+      .suggestion:hover { background: #f8f8f8; border-color: #cfcfcf; }
+      .message { display: flex; gap: 14px; margin: 0 0 26px; line-height: 1.65; white-space: pre-wrap; overflow-wrap: anywhere; }
+      .avatar { display: grid; width: 29px; height: 29px; flex: 0 0 29px; place-items: center; border-radius: 50%; background: #efefef; font-size: 13px; }
+      .message.assistant .avatar { background: #202020; color: white; }
+      .message-body { min-width: 0; padding-top: 2px; font-size: 15px; }
+      .message-body p { margin: 0 0 10px; }
+      .message-body p:last-child { margin-bottom: 0; }
+      .message-body pre { overflow-x: auto; padding: 13px; border-radius: 10px; background: #f3f3f3; font-size: 13px; }
+      .composer-wrap { padding: 12px 24px 20px; }
+      .composer { display: flex; width: min(100%, 790px); align-items: flex-end; gap: 10px; margin: auto; padding: 10px 11px 10px 17px; border: 1px solid #d9d9d9; border-radius: 18px; box-shadow: 0 2px 8px #0000000c; }
+      .composer:focus-within { border-color: #aaa; }
+      textarea { width: 100%; max-height: 180px; min-height: 27px; resize: none; border: 0; outline: 0; background: transparent; line-height: 1.55; }
+      textarea::placeholder { color: #929292; }
+      .send {
+        display: grid; width: 34px; height: 34px; flex: 0 0 34px; place-items: center;
+        border: 0; border-radius: 11px; background: var(--accent); color: white; cursor: pointer;
+      }
+      .send:disabled { background: #d7d7d7; cursor: default; }
+      .hint { margin: 9px 0 0; color: #929292; text-align: center; font-size: 11px; }
+      .mobile-menu { display: none; border: 0; background: none; font-size: 19px; cursor: pointer; }
+      @media (max-width: 700px) {
+        .sidebar { position: fixed; z-index: 3; top: 0; bottom: 0; left: 0; transform: translateX(-100%); transition: transform .2s; box-shadow: 8px 0 30px #00000016; }
+        .sidebar.open { transform: translateX(0); }
+        .mobile-menu { display: block; }
+        .topbar { justify-content: flex-start; gap: 10px; padding: 0 15px; }
+        .status { margin-left: auto; }
+        .messages { padding: 18px 16px; }
+        .composer-wrap { padding: 10px 13px 14px; }
+        .suggestions { grid-template-columns: 1fr; margin-top: 22px; }
+        .welcome { justify-content: flex-start; padding-top: 12vh; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <aside class="sidebar" id="sidebar">
+        <div class="brand"><span class="brand-mark">✳</span><span>Qwen Chat</span></div>
+        <button class="new-chat" id="new-chat"><span aria-hidden="true">＋</span> New chat</button>
+        <div class="history-label">Recent</div>
+        <nav class="history" id="history" aria-label="Recent conversations"></nav>
+        <div class="sidebar-footer">Powered by Qwen 2.5 3B · Runs locally</div>
+      </aside>
+      <main class="main">
+        <header class="topbar">
+          <button class="mobile-menu" id="mobile-menu" aria-label="Open conversations">☰</button>
+          <div class="model-label">Qwen 2.5 <span class="model-pill">3B</span></div>
+          <div class="status" id="status"><span class="status-dot"></span><span>Checking Ollama…</span></div>
+        </header>
+        <section class="content">
+          <div class="messages" id="messages" aria-live="polite"></div>
+          <div class="composer-wrap">
+            <form class="composer" id="chat-form">
+              <textarea id="prompt" rows="1" placeholder="Message Qwen…" aria-label="Message Qwen"></textarea>
+              <button class="send" id="send" type="submit" aria-label="Send message" disabled>
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" aria-hidden="true"><path d="M12 19V5m-7 7 7-7 7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </button>
+            </form>
+            <p class="hint">Qwen can make mistakes. Check important information.</p>
+          </div>
+        </section>
+      </main>
+    </div>
+    <script>
+      const STORAGE_KEY = "qwen-chat-conversations";
+      const $ = (selector) => document.querySelector(selector);
+      const messagesEl = $("#messages");
+      const input = $("#prompt");
+      const sendButton = $("#send");
+      const statusEl = $("#status");
+      let conversations = loadConversations();
+      let activeId = null;
+      let busy = false;
+
+      function loadConversations() {
+        try {
+          const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+          return Array.isArray(stored) ? stored : [];
+        } catch (error) {
+          console.error("Could not load saved conversations:", error);
+          return [];
+        }
+      }
+
+      function saveConversations() {
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(conversations));
+        } catch (error) {
+          console.error("Could not save conversations:", error);
+        }
+      }
+
+      function renderHistory() {
+        const history = $("#history");
+        history.replaceChildren();
+        for (const conversation of conversations) {
+          const button = document.createElement("button");
+          button.className = `history-item${conversation.id === activeId ? " active" : ""}`;
+          button.textContent = conversation.title;
+          button.title = conversation.title;
+          button.addEventListener("click", () => openConversation(conversation.id));
+          history.append(button);
+        }
+      }
+
+      function renderWelcome() {
+        const welcome = document.createElement("div");
+        welcome.className = "welcome";
+        welcome.innerHTML = '<div class="welcome-icon" aria-hidden="true">✳</div><h1>What can I help with?</h1><p>Ask anything. Qwen is ready to think it through with you.</p>';
+        const suggestions = document.createElement("div");
+        suggestions.className = "suggestions";
+        for (const suggestion of ["Explain a tricky concept simply", "Help me write a great first draft", "Suggest a weekend project to try", "Give me a step-by-step learning plan"]) {
+          const button = document.createElement("button");
+          button.className = "suggestion";
+          button.textContent = suggestion;
+          button.addEventListener("click", () => {
+            input.value = suggestion;
+            updateComposer();
+            input.focus();
+          });
+          suggestions.append(button);
+        }
+        welcome.append(suggestions);
+        messagesEl.replaceChildren(welcome);
+      }
+
+      function appendMessage(message) {
+        const row = document.createElement("article");
+        row.className = `message ${message.role}`;
+        const avatar = document.createElement("div");
+        avatar.className = "avatar";
+        avatar.textContent = message.role === "user" ? "You" : "✳";
+        const body = document.createElement("div");
+        body.className = "message-body";
+        body.textContent = message.content;
+        row.append(avatar, body);
+        messagesEl.append(row);
+        messagesEl.scrollTop = messagesEl.scrollHeight;
+        return body;
+      }
+
+      function renderConversation() {
+        messagesEl.replaceChildren();
+        const conversation = conversations.find((item) => item.id === activeId);
+        if (!conversation || conversation.messages.length === 0) {
+          renderWelcome();
+          return;
+        }
+        for (const message of conversation.messages) appendMessage(message);
+      }
+
+      function openConversation(id) {
+        activeId = id;
+        renderHistory();
+        renderConversation();
+        $("#sidebar").classList.remove("open");
+      }
+
+      function newConversation() {
+        activeId = null;
+        renderHistory();
+        renderWelcome();
+        input.focus();
+        $("#sidebar").classList.remove("open");
+      }
+
+      function updateComposer() {
+        sendButton.disabled = busy || !input.value.trim();
+        input.style.height = "auto";
+        input.style.height = `${Math.min(input.scrollHeight, 180)}px`;
+      }
+
+      async function checkHealth() {
+        try {
+          const response = await fetch("/api/health");
+          if (!response.ok) throw new Error(`Server returned ${response.status}`);
+          statusEl.classList.remove("offline");
+          statusEl.lastElementChild.textContent = "Ollama ready";
+        } catch (error) {
+          console.error("Could not check chatbot status:", error);
+          statusEl.classList.add("offline");
+          statusEl.lastElementChild.textContent = "Ollama unavailable";
+        }
+      }
+
+      function showError(message) {
+        const body = appendMessage({ role: "assistant", content: `Sorry, ${message}` });
+        body.style.color = "#a23434";
+      }
+
+      async function sendMessage(text) {
+        let conversation = conversations.find((item) => item.id === activeId);
+        if (!conversation) {
+          conversation = {
+            id: crypto.randomUUID(),
+            title: text.trim().replace(/\s+/g, " ").slice(0, 42) || "New chat",
+            messages: [],
+          };
+          conversations.unshift(conversation);
+          activeId = conversation.id;
+        }
+
+        const userMessage = { role: "user", content: text.trim() };
+        conversation.messages.push(userMessage);
+        appendMessage(userMessage);
+        renderHistory();
+        saveConversations();
+
+        const assistantMessage = { role: "assistant", content: "" };
+        conversation.messages.push(assistantMessage);
+        const answer = appendMessage(assistantMessage);
+        busy = true;
+        updateComposer();
+
+        try {
+          const response = await fetch("/api/chat", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              messages: conversation.messages.slice(0, -1).map(({ role, content }) => ({ role, content })),
+            }),
+          });
+          if (!response.ok) {
+            const data = await response.json().catch(() => ({}));
+            throw new Error(data.error || `Request failed (${response.status}).`);
+          }
+          if (!response.body) throw new Error("Streaming is not supported by this browser.");
+
+          const reader = response.body.getReader();
+          const decoder = new TextDecoder();
+          let buffer = "";
+          while (true) {
+            const { done, value } = await reader.read();
+            buffer += decoder.decode(value, { stream: !done });
+            const events = buffer.split("\n\n");
+            buffer = events.pop() || "";
+            for (const event of events) {
+              const dataLine = event.split("\n").find((line) => line.startsWith("data: "));
+              if (!dataLine) continue;
+              const data = JSON.parse(dataLine.slice(6));
+              if (data.error) throw new Error(data.error);
+              assistantMessage.content += data.content || "";
+              answer.textContent = assistantMessage.content;
+              messagesEl.scrollTop = messagesEl.scrollHeight;
+              saveConversations();
+            }
+            if (done) break;
+          }
+          if (!assistantMessage.content) {
+            conversation.messages.pop();
+            answer.remove();
+          }
+        } catch (error) {
+          console.error("Chat request failed:", error);
+          conversation.messages.pop();
+          answer.closest(".message").remove();
+          showError(error.message);
+        } finally {
+          busy = false;
+          updateComposer();
+          saveConversations();
+        }
+      }
+
+      $("#chat-form").addEventListener("submit", (event) => {
+        event.preventDefault();
+        const text = input.value.trim();
+        if (!text || busy) return;
+        input.value = "";
+        updateComposer();
+        sendMessage(text);
+      });
+      input.addEventListener("input", updateComposer);
+      input.addEventListener("keydown", (event) => {
+        if (event.key === "Enter" && !event.shiftKey) {
+          event.preventDefault();
+          $("#chat-form").requestSubmit();
+        }
+      });
+      $("#new-chat").addEventListener("click", newConversation);
+      $("#mobile-menu").addEventListener("click", () => $("#sidebar").classList.toggle("open"));
+
+      renderHistory();
+      renderConversation();
+      checkHealth();
+    </script>
+  </body>
+</html>

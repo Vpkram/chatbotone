@@ -1,0 +1,9 @@
+{
+  "name": "qwen-chatbot",
+  "version": "1.0.0",
+  "private": true,
+  "description": "A local ChatGPT-style chatbot powered by Qwen 2.5 3B through Ollama",
+  "scripts": {
+    "start": "node server.mjs"
+  }
+}
